@@ -56,6 +56,39 @@ def get_uptime():
     minutos = int((segundos % 3600) // 60)
     return str(dias) + "d " + str(horas) + "h " + str(minutos) + "m"
 
+def get_ip_local():
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip = s.getsockname()[0]
+    s.close()
+    return ip
+
+def get_procesos():
+    f = open("/proc/stat", "r")
+    f.close()
+    resultado = os.popen("ps aux --sort=-%cpu | head -6").read()
+    lineas = resultado.strip().split("\n")
+    texto = ""
+    for linea in lineas[1:]:
+        partes = linea.split()
+        cpu = partes[2]
+        mem = partes[3]
+        nombre = partes[10]
+        texto = texto + nombre + " CPU:" + cpu + "% RAM:" + mem + "%\n"
+    return texto
+
+def get_pihole():
+    auth = requests.post("http://localhost/api/auth", json={"password": config.PIHOLE_PASSWORD})
+    sid = auth.json()["session"]["sid"]
+    headers = {"sid": sid}
+    respuesta = requests.get("http://localhost/api/stats/summary", headers=headers)
+    datos = respuesta.json()
+    bloqueados = datos["queries"]["blocked"]
+    total = datos["queries"]["total"]
+    porcentaje = round(100 * bloqueados / total, 1)
+    return str(bloqueados) + " bloqueados de " + str(total) + " consultas (" + str(porcentaje) + "%)"
+
 def mandar_mensaje(texto):
     url = "https://api.telegram.org/bot" + config.TOKEN + "/sendMessage"
     datos = {
@@ -108,6 +141,29 @@ def procesar_comandos():
         elif texto == "/reiniciar":
             mandar_mensaje("🔄 Reiniciando el Pi...")
             os.system("sudo reboot")
+
+        elif texto == "/ip":
+            ip = get_ip_local()
+            mandar_mensaje("🌐 IP local: " + ip + "\n🔒 Tailscale: 100.125.239.75")
+
+        elif texto == "/procesos":
+            procesos = get_procesos()
+            mandar_mensaje("⚙️ Top procesos:\n" + procesos)
+
+        elif texto == "/pihole":
+            stats = get_pihole()
+            mandar_mensaje("🛡️ Pi-hole hoy: " + stats)
+
+        elif texto == "/ayuda":
+            mandar_mensaje(
+                "🍓 Comandos disponibles:\n\n"
+                "/estado → CPU, RAM, temperatura, disco y uptime\n"
+                "/ip → IP local y Tailscale\n"
+                "/procesos → top 5 procesos por CPU\n"
+                "/pihole → estadísticas de Pi-hole\n"
+                "/reiniciar → reinicia el Pi\n"
+                "/ayuda → muestra este mensaje"
+            )
 
 contador = 0
 
