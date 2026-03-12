@@ -53,12 +53,15 @@ def parsear_mensaje(mensaje):
 
 def comprobar_recordatorios():
     recordatorios = cargar_recordatorios()
-    ahora = datetime.now().strftime("%H:%M")
+    ahora = datetime.now()
     pendientes = []
     disparados = []
 
     for r in recordatorios:
-        if r["hora"] == ahora:
+        partes = r["hora"].split(":")
+        hora_r = ahora.replace(hour=int(partes[0]), minute=int(partes[1]), second=0)
+        diferencia = (ahora - hora_r).total_seconds()
+        if 0 <= diferencia <= 90:
             disparados.append(r)
         else:
             pendientes.append(r)
