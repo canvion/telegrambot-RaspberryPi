@@ -190,7 +190,7 @@ def get_dispositivos():
     dispositivos = set()
     for linea in resultado.strip().split("\n"):
         partes = linea.split()
-        if len(partes) >= 4:
+        if len(partes) >= 4 and partes[3] != "<incomplete>":
             ip = partes[1].replace("(", "").replace(")", "")
             mac = partes[3]
             dispositivos.add(ip + " " + mac)
@@ -376,12 +376,13 @@ while True:
             mandar_mensaje("💾 Disco casi lleno: " + str(porcentaje_disco) + "%")
 
         # Monitor de red
+# Monitor de red
         dispositivos_actuales = get_dispositivos()
         nuevos = dispositivos_actuales - dispositivos_conocidos
         for dispositivo in nuevos:
             mandar_mensaje("📡 Nuevo dispositivo en la red: " + dispositivo)
+            dispositivos_conocidos.add(dispositivo)
         if len(nuevos) > 0:
-            dispositivos_conocidos = dispositivos_actuales
             guardar_dispositivos(dispositivos_conocidos)
 
     time.sleep(10)
